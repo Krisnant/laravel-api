@@ -14,4 +14,6 @@ use App\Http\Controllers\AuthController;
 |
 */
 
-Route::get('/', [AuthController::class, 'index' ]);
+// Route::get('/', function () {
+//     return view('welcome');
+// });

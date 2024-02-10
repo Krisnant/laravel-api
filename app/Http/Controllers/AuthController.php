@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Hash;
 class AuthController extends Controller
 {
 
-    /**
+       /**
      * Create a new AuthController instance.
      *
      * @return void
@@ -53,9 +53,9 @@ class AuthController extends Controller
     public function register()
     {
         $validator = Validator::make(request()->all(),[
-            'name'=> 'required',
+            'name'=> 'required|min:3',
             'email'=> 'required|email|unique:users',
-            'password'=> 'required|confirmed',
+            'password'=> 'required|min:8|confirmed',
         ]);
 
         if($validator->fails()){
@@ -68,9 +68,9 @@ class AuthController extends Controller
             'password'=> Hash::make (request('password')),
         ]);
         if($user){
-            return response()->json(['message' => 'Registration Successful']);
+            return response()->json(['message' => 'Registrasi berhasil']);
         }else{
-            return response()->json(['message' => 'Registration Failed']);
+            return response()->json(['message' => 'Registrasi gagal']);
         }   
     }
 
@@ -79,16 +79,40 @@ class AuthController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function login()
-    {
-        $credentials = request(['email', 'password']);
+    public function login(Request $request)
+{
+    $credentials = $request->only('name', 'password');
+    
+    // Periksa apakah login sebagai admin
+    $isAdmin = User::where('name', $credentials['name'])
+                   ->where('role', 'admin')
+                   ->exists();
 
+    // Jika login sebagai admin, abaikan validasi tertentu
+    if ($isAdmin) {
+        if (! auth()->attempt($credentials)) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+    } else {
+        // Validasi standar untuk pengguna non-admin
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|min:3', // Aturan yang ingin diubah sesuai kebutuhan
+            'password' => 'required|min:8',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->messages(), 422); // Kode status 422 untuk Unprocessable Entity
+        }
+
+        // Proses login biasa untuk pengguna non-admin
         if (! $token = auth()->attempt($credentials)) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-
-        return $this->respondWithToken($token);
     }
+
+    return $this->respondWithToken($token);
+}
+
 
     /**
      * Get the authenticated User.
